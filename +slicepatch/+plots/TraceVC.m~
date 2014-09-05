@@ -1,0 +1,33 @@
+function TraceVC(varargin)
+% plot single traces
+%   single traces under certain conditions
+
+% keys = fetch(slicepatch.TraceVC & varargin);
+% 
+% for iKey = keys'
+%     key = fetch(slicepatch.TraceVC & iKey, '*');
+%     figure
+%     plot(key.time, key.trace)
+% end
+
+key_non = fetch(slicepatch.TraceVC & varargin & 'trace_idx=7','*');
+
+key_TTX = fetch(slicepatch.TraceVC & varargin & 'trace_idx=6','*');
+
+key_TTX_4AP = fetch(slicepatch.TraceVC & varargin & 'trace_idx=5','*');
+
+time = key_non.time;
+trace_non = key_non.trace - key_non.baseline;
+trace_TTX = key_TTX.trace - key_TTX.baseline;
+trace_TTX_4AP = key_TTX_4AP.trace - key_TTX_4AP.baseline;
+
+fig = Figure(); hold on
+plot(time, trace_non, 'k')
+plot(time, trace_TTX, 'r')
+plot(time, trace_TTX_4AP, 'g')
+
+legend('None', 'TTX', 'TTX+4AP')
+
+plot(300:302, [25,25,25], 'b','LineWidth', 5);
+plot(600:650, -150*ones(1,length(600:650)), 'k')
+plot(600*ones(1,length(-250:-150)), -250:-150, 'k')
