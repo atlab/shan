@@ -1,45 +1,37 @@
-function OriTuningVmOpto(varargin)
+function OriTuningVmOpto(type,varargin)
 %h = OriTuningVm(key)
 %
 % Plots orientation tuning of Vm for OriTuningOpto
 
 % load data
 
-keys = fetch(patch.OriTuning & varargin,'*');
+keys = fetch(patch.OriTuningOpto & varargin & (patch.Cell & 'patch_type="whole cell"'));
 
-% for ii = 1:length(keys)
-%     key =keys(ii);
-%     mean_vm_on = mean(key.vm_tuning_on,2);
-%     mean_vm_off = mean(key.vm_tuning_off,2);
-%     sem_vm_on = std(key.vm_tuning_on,[],2)/sqrt(length(key.vm_tuning_on));
-%     sem_vm_off = std(key.vm_tuning_off,[],2)/sqrt(length(key.vm_tuning_off));
-%     
-%     figure; hold on
-%     errorbar(key.oris,mean_vm_on, sem_vm_on);
-%     errorbar(key.oris,mean_vm_off, sem_vm_off,'g');
-%     
-%     mean_spk_on = mean(key.spk_tuning_on,2);
-%     mean_spk_off = mean(key.spk_tuning_off,2);
-%     sem_spk_on = std(key.spk_tuning_on,[],2)/sqrt(length(key.spk_tuning_on));
-%     sem_spk_off = std(key.spk_tuning_off,[],2)/sqrt(length(key.spk_tuning_off));
-%     
-%     figure; hold on
-%     errorbar(key.oris,mean_spk_on, sem_spk_on);
-%     errorbar(key.oris,mean_spk_off, sem_spk_off,'g');
-% end
-for ii = 1:length(keys)
-    key =keys(ii);
-    mean_vm = mean(key.vm_tuning,2)*1000;
+for iKey = keys'
     
-    sem_vm = std(key.vm_tuning,[],2)/sqrt(length(key.vm_tuning))*1000;
-   
-    figure; hold on
-    errorbar(key.oris,mean_vm, sem_vm);
-   
+    [oris, vm_tuning_on, vm_tuning_off] = fetch1(patch.OriTuningOpto & iKey, 'oris','vm_tuning_on','vm_tuning_off');
     
-    mean_spk = mean(key.spk_tuning,2);
+    oris = oris*pi/180;
     
-    sem_spk = std(key.spk_tuning,[],2)/sqrt(length(key.spk_tuning));
-    figure; hold on
-    errorbar(key.oris,mean_spk, sem_spk); ylim([0,1.5]);
+    if strcmp(type, 'polar')
+        oris(length(oris)+1) = oris(1);
+        vm_tuning_on = cellfun(@mean,vm_tuning_on)';
+        vm_tuning_on(length(vm_tuning_on)+1) = vm_tuning_on(1);
+        vm_tuning_off = cellfun(@mean,vm_tuning_off)';
+        vm_tuning_off(length(vm_tuning_off)+1) = vm_tuning_off(1);
+        figure;
+        polar(oris, vm_tuning_off, 'k'); hold on
+        polar(oris, vm_tuning_on);
+        legend('LED off', 'LED on');
+    elseif strcmp(type, 'dot')
+        vm_tuning_on_mean = cellfun(@mean,vm_tuning_on)';
+        vm_tuning_off_mean = cellfun(@mean,vm_tuning_off)';
+        vm_tuning_on_ste = cellfun(@std,vm_tuning_on)'./sqrt(cellfun(@length,vm_tuning_on)');
+        vm_tuning_off_ste = cellfun(@std,vm_tuning_off)'./sqrt(cellfun(@length,vm_tuning_off)');
+        figure;
+        errorbar(oris, vm_tuning_off_mean, vm_tuning_off_ste, 'k'); hold on
+        errorbar(oris, vm_tuning_on_mean, vm_tuning_on_ste);
+        legend('LED off','LED on');
+    end
+
 end

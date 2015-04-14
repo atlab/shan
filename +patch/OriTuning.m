@@ -23,10 +23,16 @@ classdef OriTuning < dj.Relvar & dj.AutoPopulate
             %[vLow,spkts] = fetch1(patch.CleanEphys & key,'vm_low','spk_ts'); 
             vm = patch.utils.cleanVm(key);
             
-            spkts = fetchn(patch.Spikes & key,'spk_ts');
+            [spkts,spkwid] = fetchn(patch.Spikes & key,'spk_ts','spk_width');
             vt = fetch1(patch.Ephys & key,'ephys_time');
-
-            vLow = patch.utils.deSpike(vt,vm,spkts);
+            
+            recType = fetch1(patch.Cell & key, 'patch_type');
+            if strcmp(recType, 'whole cell');
+                vLow = patch.utils.deSpike(vt,vm,spkts,spkwid);
+            else
+                vLow = vm;
+            end
+            
             vLow = ezfilt(vLow,55,10000,'low');
             
             dt = median(diff(vt));
@@ -43,7 +49,7 @@ classdef OriTuning < dj.Relvar & dj.AutoPopulate
             
             for i=1:length(oriTrials)
                 start = ts2ind(oriTrials(i).trial_onset,vt,dt);
-                stop = ts2ind(oriTrials(i).trial_onset + oriTrials(i).trial_duration,vt,dt);
+                stop = ts2ind(oriTrials(i).trial_onset + oriTrials(i).trial_duration,vt,dt,'extrap');
                 
                 k = size(vMat{find(oris==oriTrials(i).direction)},1);
                 
@@ -58,9 +64,11 @@ classdef OriTuning < dj.Relvar & dj.AutoPopulate
             end
             len = round(min(cellfun(@length,vMat))*.95);
             clear m
+            tuple.vm_tuning = cell(length(oris),1);
+            tuple.spk_tuning = cell(length(oris),1);
             for i=1:length(vMat)
-                tuple.vm_tuning(i,:)=nanmean(vMat{i}(:,1:len),2);
-                tuple.spk_tuning(i,:)=nansum(spkMat{i}(:,1:len),2);
+                tuple.vm_tuning{i}=nanmean(vMat{i}(:,1:len),2);
+                tuple.spk_tuning{i}=nansum(spkMat{i}(:,1:len),2);
             end
             tuple.oris = oris;
             self.insert(tuple);

@@ -1,8 +1,10 @@
 %{
 patch.Spikes (imported) # spike waveforms and statistics
 -> patch.Ephys
-spk_ts : float            # timestamp of spike in seconds, with same t=0 same as patch.Ephys
+spk_id : int                # index of a spike
+
 -----
+spk_ts : float              # timestamp of spike in seconds, with same t=0 same as patch.Ephys
 spk_isvalid : boolean       # true if spike is a valid spike
 spk_wf : blob               # segmented spike waveform (-50:+100 samples)
 spk_thresh = NULL : float   # spike threshold (mV)
@@ -25,7 +27,10 @@ classdef Spikes < dj.Relvar & dj.AutoPopulate
             [vt,vm,fs] = patch.utils.cleanVm(key);
             dt = 1/fs;
             
-            spkInd = patch.utils.spkDetect(vt,vm);
+            patch_type = fetch1(patch.Cell & key, 'patch_type');
+            spkInd = patch.utils.spkDetect(vt,vm, patch_type);
+            
+            
             
             for i=1:length(spkInd)
                 tuple = key;
@@ -60,7 +65,8 @@ classdef Spikes < dj.Relvar & dj.AutoPopulate
                 elseif pwhh > .004 || pwhh < .0008 || peak-thresh < .004
                     tuple.spk_isvalid=0;
                 end
-                 
+                
+                tuple.spk_id = i;
                 tuple.spk_wf = single(wf * 1000);
                 tuple.spk_thresh = thresh * 1000;
                 tuple.spk_peak = peak * 1000;

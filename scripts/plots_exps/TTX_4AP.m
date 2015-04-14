@@ -1,6 +1,6 @@
 key.animal_id = 1482;
 key.slice_id = 1;
-key.cell_id = 2;
+key.cell_id = 5;
 
 key_non = fetch(slicepatch.TraceVC & key & 'trace_idx=7','*');
 
@@ -13,6 +13,12 @@ trace_non = key_non.trace - key_non.baseline;
 trace_TTX = key_TTX.trace - key_TTX.baseline;
 trace_TTX_4AP = key_TTX_4AP.trace - key_TTX_4AP.baseline;
 
+minlen = min([length(trace_non),length(trace_TTX),length(trace_TTX_4AP)]);
+trace_non = trace_non(1:minlen);
+trace_TTX = trace_TTX(1:minlen);
+trace_TTX_4AP = trace_TTX_4AP(1:minlen);
+time = time(1:minlen);
+
 fig = Figure(101,'size',[60,45]); hold on
 plot(time, trace_non, 'k')
 plot(time, trace_TTX, 'r')
@@ -24,4 +30,4 @@ plot(300:302, [25,25,25], 'b','LineWidth', 5);
 plot(600:650, -150*ones(1,length(600:650)), 'k')
 plot(600*ones(1,length(-250:-150)), -250:-150, 'k')
 
-fig.cleanup; fig.save('/Volumes/lab/users/V2_project/FineResults/summary/epsc_wdrug_exp')
+% fig.cleanup; fig.save('/Volumes/lab/users/V2_project/FineResults/summary/epsc_wdrug_exp')

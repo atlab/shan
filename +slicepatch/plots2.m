@@ -346,6 +346,9 @@ classdef plots2
             for key = fetch(slicepatch.Slice & varargin)'
                 mode = input('Please enter the mode you want: ', 's');
                 voltage = input('Please enter the membrane voltage:');
+                nLed = input('Please enter the number of led stimuli:');
+                key_res = fetch(slicepatch.TraceCondCC & key & ['nled=' num2str(nLed)]);
+                
                 if strcmp(mode, 'VC')
                     if voltage==-70
                         cells = fetch(slicepatch.TraceVC & key & 'vm=-70','*');
@@ -354,7 +357,7 @@ classdef plots2
                     else
                         error('The input voltage is not valid!');
                     end
-                    figure(201); set(201,'Position', get(201, 'Position').*[1,1,2,1]);
+                    figure; set(gcf,'Position', get(201, 'Position').*[1,1,2,1]);
                      
                     for ii = 1:length(cells)
                         h(ii) = subplot(2,4,cells(ii).cell_id);
@@ -370,17 +373,18 @@ classdef plots2
                         ylabel('time/ms','FontSize',12); xlabel('current/pA','FontSize',12);
                     end
                     linkaxes(h); ylim([-200,50]);
-                    set(201,'Name',key2str(key))
+                    set(gcf,'Name',key2str(key))
                 end
                 if strcmp(mode, 'CC')
                     if voltage==-70
-                        cells = fetch(slicepatch.FineTraceCC & key & 'baseline<-65' & 'baseline>-75','*');
+                        cells = fetch(slicepatch.FineTraceCC & key & key_res & 'baseline<-65' & 'baseline>-75','*');
+                        
                     elseif voltage==-60
-                        cells = fetch(slicepatch.FineTraceCC & key & 'baseline<-55' & 'baseline>-65', '*');
+                        cells = fetch(slicepatch.FineTraceCC & key & key_res & 'baseline<-55' & 'baseline>-65', '*');
                     else
                         error('The input voltage is not valid!');
                     end
-                    figure(202); set(202,'Position', [1,1,1000,300]);
+                    figure; set(gcf,'Position', [1,1,1000,300]);
                     clf
                     for ii = 1:length(cells)
                         h(ii) = subplot(2,4,cells(ii).cell_id);
@@ -395,106 +399,24 @@ classdef plots2
                         title(['Cell ' num2str(cells(ii).cell_id) '-' cell_layer ' ' cell_type]);
                         
                     end
-                    linkaxes(h); ylim([-3,10]);
-                    set(202,'Name',key2str(key))
+                    linkaxes(h); ylim([-3,5]);
+                    set(gcf,'Name',key2str(key))
                 end
                 
             end
         end
-        function PeriLedFiring(func,varargin)
-            if strcmp(func,'on')
-                table = 'slicepatch.PeriLed';
-            else
-                table = 'slicepatch.PeriLedOff';
-            end
-            fig = Figure(103,'size', [100,100]); hold on
-            baseline = 0;
-            animal_restrict = fetch(common.Animal & 'owner="Shan"' &  'line!="WFS1-Cre"' & 'line!="Etv1-Cre"');
-            keys_restrict = fetch(slicepatch.PeriLed & 'peri_led_delay>49' & 'peri_led_delay<151');
-            keys_cell = fetch(slicepatch.Cell & animal_restrict & keys_restrict & 'cell_type_morph="pyr"'& varargin)';
-            for key = keys_cell
-                keys = fetch(eval(table) & key & 'peri_led_delay>49' & 'peri_led_delay<151')';
-           
-                if ~isempty(keys)
-                    baseline = baseline + 10;
-                else
-                    continue
-                end
-                for key2 = keys
-                    trace = fetch(eval(table) & key2, '*');
-                    baseline = baseline+1;
-                    plot(trace.peri_led_time(logical(trace.peri_led_spk)),baseline,'k.','markersize',5);
-                end
-                
-            end
-            
-            ylim = get(gca,'YLim');
-            h = patch([0,20,20,0],[ylim(1) ylim(1),ylim(2),ylim(2)],'c');
-            uistack(h,'bottom');
-            fig.cleanup; fig.save('/Volumes/lab/users/Shan/V2_project/FineResults/summary/all_firing_off')
-        end
-        function SpikeDensity(layer,varargin)
-            
-            animal_restrict = fetch(common.Animal & 'owner="Shan"' &  'line!="WFS1-Cre"' & 'line!="Etv1-Cre"');
-            keys_restrict = fetch(slicepatch.PeriLed & 'peri_led_delay>49' & 'peri_led_delay<151');
-            keys_cell = fetch(slicepatch.Cell & animal_restrict & keys_restrict & 'cell_type_morph="pyr"' & varargin)';
-            time = -200:0.04:300;
-            spkcount_on = zeros(size(time));
-            spkcount_off = zeros(size(time));
-            for key = keys_cell
-                keys_on = fetch(slicepatch.PeriLed & key & 'peri_led_delay>49' & 'peri_led_delay<151')';
-                for ikey = keys_on
-                    trace = fetch(slicepatch.PeriLed & ikey,'*');
-                    spk_time = trace.peri_led_time(logical(trace.peri_led_spk));
-                    for ii = 1:length(spk_time)
-                        spkcount_on(time==spk_time(ii)) = spkcount_on(time==spk_time(ii))+1;
-                    end
-                end
-                keys_off = fetch(slicepatch.PeriLedOff & key & 'peri_led_delay>49' & 'peri_led_delay<151')';
-                 for ikey = keys_off
-                    trace = fetch(slicepatch.PeriLedOff & ikey,'*');
-                    spk_time = trace.peri_led_time(logical(trace.peri_led_spk));
-                    for ii = 1:length(spk_time)
-                        spkcount_off(time==spk_time(ii)) = spkcount_off(time==spk_time(ii))+1;
-                    end
-                end 
-            end
-%             dt = 1;
-%             time_bin = -200:dt:300;
-%             spkcount_on_bin = zeros(size(time_bin));
-%             spkcount_off_bin = zeros(size(time_bin));
-%             for ii = 1:length(time_bin)
-%                 idx = (time<=time_bin(ii)+dt/2)&(time>=time_bin(ii)-dt/2);
-%                 spkcount_on_bin(ii) = sum(spkcount_on(idx));
-%                 spkcount_off_bin(ii) = sum(spkcount_off(idx));
-%             end
-            % convolution way of showing spike density
-            spkcount_on_bin = conv(spkcount_on, gausswin(50),'same');
-            spkcount_off_bin = conv(spkcount_off,gausswin(50),'same');
-            spkcount_on_bin_norm = spkcount_on_bin/max(spkcount_off_bin);
-            spkcount_off_bin_norm = spkcount_off_bin/max(spkcount_off_bin);
-            figure; plot(time,spkcount_on_bin_norm,time,spkcount_off_bin_norm,'r'); 
-%             ylim([0,10]);xlim([-50,100]);
-            ylim([0,2.5]); xlim([-50,100]);
-            
-            Ylim = get(gca,'YLim');
-            h = patch([0,20,20,0],[Ylim(1) Ylim(1),Ylim(2),Ylim(2)],'c');
-            uistack(h,'bottom');
-            set(gcf, 'Position', [1,1,500,250]);
-            xlabel('Time(ms)'); ylabel('Normalized spike counts'); legend('LED stimulation', 'spike density with LED on', 'spike density with LED off');
-            title(['Pyramidal cells-' layer]);
-            
-        end
+        
         function FiringTrace_on(varargin)
             keys = fetch(slicepatch.Firing & varargin & 'led_stat=1')';
             for key = keys
                 trace = fetch(slicepatch.Firing & key, '*');
-                figure; set(gcf, 'Position',[500,500,500,250]);
+                figure; set(gcf, 'Position',[500,800,250,100]);
                 plot(trace.time, trace.trace,'k');
                 idx1 = find(diff(trace.led)==1);
                 idx2 = find(diff(trace.led)==-1);
                 Ylim = get(gca, 'YLim');
                 h = patch([trace.time(idx1),trace.time(idx2),trace.time(idx2),trace.time(idx1)],[Ylim(1) Ylim(1),Ylim(2),Ylim(2)],'c');
+                xlim([0,400])
                 uistack(h,'bottom');
                 key
                 in=input('Press Enter to continue:');
@@ -511,13 +433,14 @@ classdef plots2
             keys = fetch(slicepatch.Firing & varargin & 'led_stat=0')';
             for key = keys
                 trace = fetch(slicepatch.Firing & key, '*');
-                figure; set(gcf, 'Position',[500,500,500,250]);
+                figure; set(gcf, 'Position',[500,800,250,100]);
                 plot(trace.time, trace.trace,'k');
                 idx1 = find(diff(trace.led)==1);
                 idx2 = find(diff(trace.led)==-1);
                 Ylim = get(gca, 'YLim');
-%                 h = patch([trace.time(idx1),trace.time(idx2),trace.time(idx2),trace.time(idx1)],[Ylim(1) Ylim(1),Ylim(2),Ylim(2)],'c');
-%                 uistack(h,'bottom')
+                h = patch([trace.time(idx1),trace.time(idx2),trace.time(idx2),trace.time(idx1)],[Ylim(1) Ylim(1),Ylim(2),Ylim(2)],'c');
+                uistack(h,'bottom')
+                xlim([0,400])
                 key
                 in=input('Press Enter to continue:');
                 if isempty(in)

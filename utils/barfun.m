@@ -15,7 +15,7 @@ params.names = [];
 params.angle = 45;
 params.sig = 0;
 params.bar = 1;
-params.error = 'sde';
+params.error = 'std';
 params.colors = [];
 % % params.colors = [0,1,0;
 %                  1,1,0;
@@ -44,7 +44,7 @@ end
 %%%%%% edit for matlab 2014b
 colors = parula(nCols);
 for i = 1:nCols
-    handles.bar(i) = bar(loc(:,i),values(:,i),'barwidth',0.7/nCols,...
+    handles.bar(i) = bar(loc(:,i),values(:,i),'barwidth',3/nCols,... * 0.75 for amplitude plots
         'faceColor',colors(i,:),'edgeColor',[1,1,1]); % standard implementation of bar fn
     hold on
 end

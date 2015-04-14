@@ -30,11 +30,14 @@ for ii = 1:length(layers)
 end
 
 proportionMat_rel  = proportionMat(proportionMat>0.5);
-proportionMat(2,3) = mean(proportionMat_rel(:));
-proportionMat(2,4) = mean(proportionMat_rel(:));
-proportionMat(3,4) = mean(proportionMat_rel(:));
 
-figure; imagesc(proportionMat'); hold on; colorbar; caxis([0,1]); colormap('gray')
+proportionMat(2,4) = mean(proportionMat_rel(:));
+% proportionMat(3,4) = mean(proportionMat_rel(:));
+
+map = [ones(50,1), linspace(1,0,50)', linspace(1,0,50)'];
+
+
+figure; imagesc(proportionMat'); hold on; colorbar; caxis([0,1]); colormap(map)
 set(gca, 'XTick', 1:length(layers));
 set(gca, 'YTick', 1:length(types));
 set(gca, 'XTickLabel', layers);
@@ -43,13 +46,13 @@ set(gca, 'YTickLabel', types);
 
 for ii = 1:length(layers)
     for jj = 1:length(types)
-        if (ii ==2 && (jj==4 || jj==3)) ||(ii==3 && jj==4)
+        if ((ii ==2)&& (jj==4))
             text(ii,jj,'N/A');
         else
             if proportionMat(ii,jj)>0.5
                 text(ii,jj,[num2str(actMat(ii,jj)) '/' num2str(totalMat(ii,jj))]);
             else
-                text(ii,jj,[num2str(actMat(ii,jj)) '/' num2str(totalMat(ii,jj))], 'Color','w');
+                text(ii,jj,[num2str(actMat(ii,jj)) '/' num2str(totalMat(ii,jj))]);
             end
         end
     end

@@ -36,11 +36,13 @@ for i=1:size(bad,1)
 end
 
 % Replace stimulation periods with nans
-stimPad = .025; % sec
-for i=1:length(stimOn)
-    ind = ts2ind(stimOn(i) - stimPad, vt,dt) : ts2ind(stimOn(i) + stimDur(i) + stimPad, vt, dt);
-    vm(ind) = nan;
-end
+
+% changed by Shan 4/10/15
+% stimPad = .025; % sec
+% for i=1:length(stimOn)
+%     ind = ts2ind(stimOn(i) - stimPad, vt,dt) : ts2ind(stimOn(i) + stimDur(i) + stimPad, vt, dt);
+%     vm(ind) = nan;
+% end
 
 % Assign outputs
 if nargout == 1

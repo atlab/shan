@@ -11,10 +11,20 @@ led_ts = CURRENT_TIMESTAMP : timestamp          # automatic
 classdef Led < dj.Relvar
 
     methods
-        function makeTuples(self, key, led, ts)
+        function makeTuples(self, key, led, ts, ver)
             tuple = key;
-            onInd = find(diff(led)>3);
-            offInd = find(diff(led)<-3);
+            
+            % identify direction of peak
+            base = sum(led<0.1);
+            peak = sum(led>4.9);
+            
+            if base>peak
+                onInd = find(diff(led)>3);
+                offInd = find(diff(led)<-3);
+            else
+                onInd = find(diff(led)<-3);
+                offInd = find(diff(led)>3);
+            end
             
             if length(onInd)>length(offInd)
                 N = length(onInd)-length(offInd);
@@ -28,7 +38,17 @@ classdef Led < dj.Relvar
             if length(offInd)>length(onInd)
                 N = length(offInd)-length(onInd);
                 if N > 1
-                    error(['Missing ' num2str(N) ' LED onsets']);
+                    % check whether LED signal is ramp
+                    type = fetch1(patch.RecordingNote & key, 'led_type');
+                    if strcmp(type,'ramp')
+                        offInd1 = offInd(1);
+                        led1 = led(1:offInd(1));
+                        onInd1 = min(find(led1>0.001));
+                        len = offInd1-onInd1;
+                        onInd = offInd - len;
+                    else
+                        error(['Missing ' num2str(N) ' LED onsets']);
+                    end
                 else
                     warning('Missing one LED onset, removing first offset.');
                     offInd(1)=[];

@@ -6,9 +6,9 @@ patch.TrialSet (computed) #  visual trials
 
 classdef TrialSet < dj.Relvar & dj.AutoPopulate
     
-    properties(Constant)
-        popRel = patch.Sync
-		table = dj.Table('patch.TrialSet')
+    properties
+        popRel = patch.Sync & patch.Spikes & patch.Quality
+		
     end
     
     methods(Access = protected)

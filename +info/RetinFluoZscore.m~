@@ -1,0 +1,47 @@
+%{
+info.RetinFluoZscore (computed) # compute the z scores of each pixel
+-> info.StitchSession
+-----
+bg_mean              : double      # mean of background
+bg_std               : double      # standard deviation of background
+z_score_rel          : longblob    # z scores of each pixel of retinotopically related area, relative to background
+mean_rel             : double      # mean of the z scores of retinotopically related area
+var_rel              : double      # variance of z scores of retinotopically related area
+z_score_unrel        : longblob    # z scores of each pixel of retinotopically unrelated area
+mean_unrel           : double      # mean of the z scores of all retinotopically unrelated area
+var_unrel            : double      # variance of z scores of retinotopically unrelated area
+
+%}
+
+classdef RetinFluoZscore < dj.Relvar & dj.AutoPopulate
+    
+    properties
+        popRel = info.StitchSession & (info.RetinotopyMask & 'quality>0')
+    end
+	methods
+
+		function makeTuples(self, key)
+            tuple = key;
+            key_rel = fetch(info.RetinotopyMask & key & 'related=1');
+            key_unrel = fetch(info.RetinotopyMask & key & 'related=0');
+            [fluo_rel,bg] = fetch1(info.Extract & key_rel, 'fluo_values','bg_values');
+            fluo_unrel = fetchn(info.Extract & key_unrel, 'fluo_values');
+            
+            bg_mean = mean(bg);
+            bg_std = std(bg);
+            z_score_rel  
+            mean_rel = mean(fluo_rel);
+            mean_unrel = mean(cell2mat(fluo_unrel));
+            
+            tuple.mean_rel = mean_rel;
+            tuple.mean_unrel = mean_unrel;
+            tuple.rel_norm = fluo_rel/mean(bg);
+            tuple.unrel_norm = cell2mat(fluo_unrel)/mean(bg);
+            tuple.mean_rel_norm = mean_rel/mean(bg);
+            tuple.mean_unrel_norm = mean_unrel/mean(bg);
+            
+            self.insert(tuple)
+		end
+	end
+
+end

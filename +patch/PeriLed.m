@@ -4,16 +4,20 @@ patch.PeriLed (imported) # Peri-LED activity
 -> patch.Ephys
 -----
 peri_led_win :      tinyblob    # positive peri window durations [w1 w2] (-w1:+w2)
-peri_led_vm :       longblob    # vm trace around led onset
+peri_led_vm :       longblob    # vm trace around led onset, substract with vm at led onset
+peri_led_vm_onset:  float       # vm at led onset
 peri_led_spk :      blob        # int8 binary spike train around led onset
 peri_led_led :      blob        # int8 binary time series indicaating led status: 1 = led on, 0 = led off
+peri_led_time:      longblob    # new time of the periled trace, 0 at the led onset, in sec
+peri_led_mean_vel:  double      # mean velocity in this window
+peri_led_dt:        float       # time step, in sec
 peri_led_ts = CURRENT_TIMESTAMP : timestamp     # automatic
 %}
 
 classdef PeriLed < dj.Relvar & dj.AutoPopulate
     
     properties
-        popRel = patch.Ephys & patch.Led;
+        popRel = patch.Ephys & patch.Led & (patch.RecordingNote & 'recording_purpose="spontaneous activity"');
     end
     
     methods(Access=protected)
@@ -41,21 +45,29 @@ classdef PeriLed < dj.Relvar & dj.AutoPopulate
                 
                 key = fetch(patch.Led * patch.Ephys & key);
                 
+                [ball_time, ball_vel] = fetch1(patch.Ball & key, 'ball_time','ball_vel');
+                
                 for i=1:length(key)
                     tuple = key(i);
                     
                     win = round(round(ledDur(i)/.1)*.1 + 1);
                     tuple.peri_led_win = [win win];
+                    ind_onset = ts2ind(ledOn(i),vt,dt,'nan');
                     
                     ind = ts2ind(ledOn(i)-win,vt,dt,'nan'):ts2ind(ledOn(i)+win,vt,dt,'nan');
-                    if any(isnan(ind))
+                    ball_vel_rel = ball_vel(ball_time < ledOn(i) + win & ball_time > ledOn(i) - win);
+                    if any(isnan(ind)) || any(isnan(vm(ind)))
                         %tuple.peri_led_vm=nan(size(ind));
                         %tuple.peri_led_spk=nan(size(ind));
                         %tuple.peri_led_led=nan(size(ind));
                     else
-                        tuple.peri_led_vm=vm(ind);
+                        tuple.peri_led_vm=vm(ind)-vm(ind_onset);
+                        tuple.peri_led_vm_onset = vm(ind_onset);
                         tuple.peri_led_spk=spk(ind);
                         tuple.peri_led_led=led(ind);
+                        tuple.peri_led_time = vt(ind)-vt(ind_onset);
+                        tuple.peri_led_dt = dt;
+                        tuple.peri_led_mean_vel = mean(abs(ball_vel_rel));
                         self.insert(tuple);
                     end
                 end

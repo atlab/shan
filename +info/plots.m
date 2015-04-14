@@ -357,14 +357,13 @@ classdef plots
             end
             im(im<quantile(im(:),0.005))=quantile(im(:),0.005);
             im2 = max(im(:)) - im;
+            im2(im2<quantile(im2(:),0.7)) = 0;
             if do_smooth
                 im2 = convn(im2, gausswin(5)*gausswin(5)', 'valid');
             end
-            im2 = im2/max(im2(:))*12;
+            im2 = im2/max(im2(:))*16;
             
             im2 = exp(im2);
-            
-            im2(im2<0.3) = 0;
             
             im2 = im2/max(im2(:));
             
@@ -388,24 +387,40 @@ classdef plots
             end
         end
         
-        function Stitch(saturation,varargin)
+        function h = Stitch(saturation,channel,varargin)
             % plot the green channel of the stitching image, if there is a
             % red channel, plot the merging image as well
             % SS 2014-03-25
             keys = fetch(info.Stitch & varargin)';
             for iKey = keys
                 tuple = fetch(info.Stitch & iKey,'*');
-                if tuple.green_channel
-                    img = tuple.img_green;
-                    G = img/quantile(img(:),saturation); G(G>1) = 1; R = zeros(size(G)); B = zeros(size(G)); img2 = cat(3,R,G,B);
-                    figure; imshow(img2); keyTitle(iKey);
-                end
-                if tuple.green_channel && tuple.red_channel
-                    img_g = tuple.img_green; img_r = tuple.img_red;
-                    G = img_g/quantile(img_g(:),saturation); G(G>1) = 1; 
-                    R = img_r/quantile(img_r(:),0.99); R(R>1) = 1; 
-                    B = zeros(size(G)); img2 = cat(3,R,G,B);
-                    figure; imshow(img2); keyTitle(iKey);
+                switch channel
+                    case 'both'
+                        if ~(tuple.green_channel && tuple.red_channel)
+                            assert('The image does not have both channels!')
+                        else
+                            img_g = tuple.img_green; img_r = tuple.img_red;
+                            G = img_g/quantile(img_g(:),saturation); G(G>1) = 1; 
+                            R = img_r/quantile(img_r(:),0.99); R(R>1) = 1; 
+                            B = zeros(size(G)); img2 = cat(3,R,G,B);
+                            h=figure; imshow(img2); keyTitle(iKey);
+                        end
+                    case 'green'
+                        if ~tuple.green_channel
+                            assert('The image does not have green channel!')
+                        else
+                            img = tuple.img_green;
+                            G = img/quantile(img(:),saturation); G(G>1) = 1; R = zeros(size(G)); B = zeros(size(G)); img2 = cat(3,R,G,B);
+                            h=figure; imshow(img2); keyTitle(iKey);
+                        end
+                    case 'red'
+                        if ~tuple.red_channel
+                            assert('The image does not have red channel!')
+                        else
+                            img = tuple.img_red;
+                            R = img/quantile(img(:),0.99); R(R>1) = 1; G = zeros(size(R)); B = zeros(size(R)); img2 = cat(3,R,G,B);
+                            h=figure; imshow(img2); keyTitle(iKey);
+                        end
                 end
             end
         end
@@ -421,13 +436,16 @@ classdef plots
                end
                valuesMat = cell(1,length(keys_mask));
                for ii = 1:length(valuesMat)
-                   valuesMat{ii} = fetch1(info.Extract & iKey & keys_mask(ii),'fluo_values');
+                   [values,bg] = fetch1(info.Extract & iKey & keys_mask(ii),'fluo_values','bg_values');
+                   
+                   valuesMat{ii} = values/mean(bg);
                    
                end
                fig = Figure(101,'size',[80,45]);
                barfun(valuesMat);
                set(gca, 'XTick', 1:length(valuesMat));
                ylabel('Fluorescence');
+%                ylim([0,3]);
                fig.cleanup;
                fig.save('V2_project/FineResults/Retin_stat1')
            end
@@ -435,15 +453,53 @@ classdef plots
         
         function cmpRetin_all(varargin)
             keys = fetch(info.NormRetinFluo & varargin, '*');
-            mat_unrel = [keys.unrel_norm];
+            mat_rel = [keys.mean_rel_norm];
+            mat_unrel = [keys.mean_unrel_norm];
+            
+            mean_rel = mean(mat_rel);
+            ste_rel = std(mat_rel)/sqrt(length(mat_rel));
+            
             mean_unrel = mean(mat_unrel);
             ste_unrel = std(mat_unrel)/sqrt(length(mat_unrel));
-            fig = Figure(101,'size',[60,35]); bar([1,mean_unrel], 'barwidth', 0.5, 'facecolor', [0.8,0.8,0.8]); hold on
-            errorbar([1,mean_unrel], [0,ste_unrel],'LineStyle','None', 'Color', 'k');
-            ylim([0,1.2]); xlim([0.2,2.8])
+            
+            [h,p] = ttest(mat_rel, mat_unrel)
+            
+            fig = Figure(101,'size',[60,35]); bar([mean_rel,mean_unrel], 'barwidth', 0.5, 'facecolor', [0.8,0.8,0.8]); hold on
+            errorbar([mean_rel,mean_unrel], [ste_rel,ste_unrel],'LineStyle','None', 'Color', 'k');
+            ylim([0,3]); xlim([0.2,2.8])
             set(gca, 'xTickLabel',{'Retin', 'Non-retin'});
-            fig.cleanup; fig.save('V2_project/FineResults/Retin_stat_all');
-            ylabel('Fluorescence nomalized to retinotopically related area')
+            ylabel('Fluorescence nomalized to background')
+       
+            fig.cleanup; 
+            fig.save('V2_project/FineResults/Retin_stat_all'); 
         end
+        function cmpRetin_all2(varargin)
+             % based on Andreas' suggestion, z scores of all the pixels
+            keys = fetch(info.RetinFluoZscore & varargin, '*');
+            mat_rel = [keys.mean_rel];
+            mat_unrel = [keys.mean_unrel];
+            var_rel = [keys.var_rel];
+            var_unrel  = [keys.var_unrel];
+            
+            mean_rel = mean(mat_rel);
+            std_rel = sqrt(mean(var_rel))/sqrt(length(keys));
+            
+            mean_unrel = mean(mat_unrel);
+            std_unrel = sqrt(mean(var_unrel))/sqrt(length(keys));
+            
+            
+%            [h,p] = ttest(mat_rel, mat_unrel)
+            
+            fig = Figure(101,'size',[50,40]); bar([mean_rel,mean_unrel], 'barwidth', 0.5, 'facecolor', [0.8,0.8,0.8]); hold on
+            errorbar([mean_rel,mean_unrel], [std_rel,std_unrel],'LineStyle','None', 'Color', 'k');
+%             ylim([0,3]); 
+            xlim([0.2,2.8])
+            set(gca, 'xTickLabel',{'Retinotopic', 'Non-retinotopic'});
+            ylabel('Mean z scores')
+       
+            fig.cleanup; 
+            fig.save('Retin_stat_all'); 
+        end
+            
     end
 end

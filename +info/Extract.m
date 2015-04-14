@@ -4,7 +4,7 @@ info.Extract (computed) # extract the fluorescence strength with the mask
 -----
 vessel_correction       : tinyint     # have excluded vessels if red channel exists
 fluo_values             : longblob    # extracted values inside the mask
-
+bg_values               : longblob    # extracted values of background
 %}
 
 classdef Extract < dj.Relvar & dj.AutoPopulate
@@ -25,8 +25,9 @@ classdef Extract < dj.Relvar & dj.AutoPopulate
             img_green = img_key.img_green;
             
             % load mask
-            mask = fetch1(info.RetinotopyMask & key,'retin_mask');
+            [mask, bg_mask] = fetch1(info.RetinotopyMask & key,'retin_mask','bg_mask');
             values_rel = img_green.*double(mask);
+            bg = img_green.*double(bg_mask);
             
             % remove pixles in the vessels if red channel exists
             if img_key.red_channel
@@ -38,7 +39,11 @@ classdef Extract < dj.Relvar & dj.AutoPopulate
             values_rel = values_rel.*mask2;
             values_rel = values_rel(:);
             values_rel = values_rel(values_rel~=0);
+            
+            bg = bg(:);
+            bg = bg(bg~=0);
             tuple.fluo_values = values_rel;
+            tuple.bg_values = bg;
             
 			self.insert(tuple)
 		end

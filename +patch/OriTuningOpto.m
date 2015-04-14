@@ -14,21 +14,26 @@ orituning_ts = current_timestamp  : timestamp         # automatic
 classdef OriTuningOpto < dj.Relvar & dj.AutoPopulate
     
     properties(Constant)
-        table = dj.Table('patch.OriTuning');
-        popRel = patch.Sync * patch.Ephys & (patch.Recording & 'has_led=true');
+        popRel = patch.Sync * patch.Ephys & (patch.Recording & 'has_led=true') & (patch.RecordingNote & 'recording_purpose="orientation tuning"');
     end
     
     methods(Access=protected)
         function makeTuples(self, key)
             tuple=key;
             
-            %[vLow,spkts] = fetch1(patch.CleanEphys & key,'vm_low','spk_ts'); 
+            [spkts,spkwid] = fetchn(patch.Spikes & key,'spk_ts','spk_width');
             vm = patch.utils.cleanVm(key);
             
             spkts = fetchn(patch.Spikes & key,'spk_ts');
             vt = fetch1(patch.Ephys & key,'ephys_time');
+            
+            recType = fetch1(patch.Cell & key, 'patch_type');
+            if strcmp(recType, 'whole cell');
+                vLow = patch.utils.deSpike(vt,vm,spkts,spkwid);
+            else
+                vLow = vm;
+            end
 
-            vLow = patch.utils.deSpike(vt,vm,spkts);
             vLow = ezfilt(vLow,55,10000,'low');
             
             dt = median(diff(vt));
@@ -54,18 +59,17 @@ classdef OriTuningOpto < dj.Relvar & dj.AutoPopulate
                 
                 if ~all(isnan(vLow))
                     vMat_on{find(oris==oriTrials_on(i).direction)}(k+1,1:stop-start+1) = vLow(start:stop)-vLow(start);
-                else
-                    vMat_on{find(oris==oriTrials_on(i).direction)}(k+1,1:stop-start+1) = zeros(size(start:stop));
+                    spkMat_on{find(oris==oriTrials_on(i).direction)}(k+1,1:stop-start+1) = spk(start:stop);
                 end
                 
-                k = size(spkMat_on{find(oris==oriTrials_on(i).direction)},1);
-                spkMat_on{find(oris==oriTrials_on(i).direction)}(k+1,1:stop-start+1) = spk(start:stop);
             end
             len = round(min(cellfun(@length,vMat_on))*.95);
             clear m
+            tuple.vm_tuning_on = cell(length(oris),1);
+            tuple.spk_tuning_on = cell(length(oris),1);
             for i=1:length(vMat_on)
-                tuple.vm_tuning_on(i,:)=nanmean(vMat_on{i}(:,1:len),2);
-                tuple.spk_tuning_on(i,:)=nansum(spkMat_on{i}(:,1:len),2);
+                tuple.vm_tuning_on{i}=nanmean(vMat_on{i}(:,1:len),2);
+                tuple.spk_tuning_on{i}=nansum(spkMat_on{i}(:,1:len),2);
             end
             for i=1:length(oriTrials_off)
                 start = ts2ind(oriTrials_off(i).trial_onset,vt,dt);
@@ -75,18 +79,18 @@ classdef OriTuningOpto < dj.Relvar & dj.AutoPopulate
                 
                 if ~all(isnan(vLow))
                     vMat_off{find(oris==oriTrials_off(i).direction)}(k+1,1:stop-start+1) = vLow(start:stop)-vLow(start);
-                else
-                    vMat_off{find(oris==oriTrials_off(i).direction)}(k+1,1:stop-start+1) = zeros(size(start:stop));
+                    spkMat_off{find(oris==oriTrials_off(i).direction)}(k+1,1:stop-start+1) = spk(start:stop);
                 end
                 
-                k = size(spkMat_off{find(oris==oriTrials_off(i).direction)},1);
-                spkMat_off{find(oris==oriTrials_off(i).direction)}(k+1,1:stop-start+1) = spk(start:stop);
             end
             len = round(min(cellfun(@length,vMat_off))*.95);
             clear m
+            
+            tuple.vm_tuning_off = cell(length(oris),1);
+            tuple.spk_tuning_off = cell(length(oris),1);
             for i=1:length(vMat_off)
-                tuple.vm_tuning_off(i,:)=nanmean(vMat_off{i}(:,1:len),2);
-                tuple.spk_tuning_off(i,:)=nansum(spkMat_off{i}(:,1:len),2);
+                tuple.vm_tuning_off{i}=nanmean(vMat_off{i}(:,1:len),2);
+                tuple.spk_tuning_off{i}=nansum(spkMat_off{i}(:,1:len),2);
             end
             tuple.oris = oris;
             self.insert(tuple);

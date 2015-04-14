@@ -1,7 +1,9 @@
-function NormActivity(activity_type, figure_type)
+function NormActivity(activity_type, figure_type, excl)
 % EPSC values normalized with EPSC of L23 cells in the same slice
 %   
-
+if ~exist('excl','var')
+    excl = 'no';
+end
 layers = {'L23', 'L4', 'L5'};
 types = {'pyr', 'PV', 'SST', 'VIP'};
 
@@ -13,17 +15,34 @@ for ii = 1:length(layers)
     for jj = 1:length(types)
         cells_rel = fetch(slicepatch.Cell & 'animal_id!=3024' & ['cell_layer="' layers{ii} '"'] & ['cell_type_gene="' types{jj} '"']);
         if strcmp(activity_type,'epsc')
-            cell_res = fetch(slicepatch.CellSummary & cells_rel & 'has_norm_epsc=1', '*');
-            actMat{ii,jj} = [cell_res.norm_epsc]; 
+            if strcmp(excl, 'yes')
+                cell_res = fetch(slicepatch.CellSummary & cells_rel & 'res_epsc = 1');
+                cell_res = fetch(slicepatch.CellSummaryNorm & cell_res &  'has_norm_epsc=1', '*');
+            else
+                cell_res = fetch(slicepatch.CellSummaryNorm & cells_rel & 'has_norm_epsc=1', '*');
+            end
+            log_norm_epsc = [cell_res.norm_epsc];
+            actMat{ii,jj} = log_norm_epsc;
             yLim = [0,6];
             yName = 'EPSC normalized to the L23 pyramidal cells';
         elseif strcmp(activity_type,'epsp')
-            cell_res = fetch(slicepatch.CellSummary & cells_rel & 'has_norm_epsp=1', '*');
-            actMat{ii,jj} = [cell_res.norm_epsp];
-            yLim = [0,6];
+            if strcmp(excl, 'yes')
+                cell_res = fetch(slicepatch.CellSummary & cells_rel & 'res_epsp = 1');
+                cell_res = fetch(slicepatch.CellSummaryNorm & cell_res & 'has_norm_epsp=1', '*');
+            else
+                cell_res = fetch(slicepatch.CellSummaryNorm & cells_rel & 'has_norm_epsp=1', '*');
+            end
+            log_norm_epsp = log([cell_res.norm_epsp]);
+            actMat{ii,jj} = log_norm_epsp;
+            yLim = [-3,3];
             yName = 'EPSP normalized to the L23 pyramidal cells';
         elseif strcmp(activity_type,'ipsc')
-            cell_res = fetch(slicepatch.CellSummary & cells_rel & 'has_norm_ipsc=1', '*');
+            if strcmp(excl, 'yes')
+                cell_res = fetch(slicepatch.CellSummary & cells_rel & 'res_ipsc = 1');
+                cell_res = fetch(slicepatch.CellSummaryNorm & cell_res, '*');
+            else
+                cell_res = fetch(slicepatch.CellSummaryNorm & cells_rel & 'has_norm_ipsc=1', '*');
+            end
             actMat{ii,jj} = [cell_res.norm_ipsc];
             yLim = [0,6];
             yName = 'IPSC nomalized to the L23 pyramidal cells';
@@ -61,6 +80,9 @@ elseif strcmp(figure_type, 'bar')
     legend(types);
     ylim(yLim); ylabel(yName)
     fig.cleanup;
-    
-    fig.save(['V2_project/FineResults/summary/' activity_type '_norm.eps'])
+    if strcmp(excl,'no')
+        fig.save(['/Volumes/lab/users/Shan/V2_project/FineResults/summary/' activity_type '_norm.eps'])
+    else
+        fig.save(['/Volumes/lab/users/Shan/V2_project/FineResults/summary/' activity_type '_norm_active_only.eps'])
+    end
 end

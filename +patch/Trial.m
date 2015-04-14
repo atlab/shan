@@ -12,10 +12,6 @@ oritrial_ts=CURRENT_TIMESTAMP: timestamp                    # automatic
 
 classdef Trial < dj.Relvar    
     
-    properties(Constant)
-		table = dj.Table('patch.Trial')
-	end
-    
     methods
         function makeTuples(self, key)
             ephysKey = fetch(patch.Ephys & key);
