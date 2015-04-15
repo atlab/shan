@@ -32,27 +32,27 @@ for iKey = cell_res'
     spk_off_all = sum(horzcat(spk_off{:}),2);
     spk_on_all = sum(horzcat(spk_on{:}),2);
         
-    if sum(spk_off_all)>200
+    if sum(spk_off_all)>100
         cnt = cnt+1;
         spk_on_inh = spk_on_all(time<0.15 & time>0.03);
         spk_off_inh = spk_off_all(time<0.15 & time>0.03);
-        spk_on_exc = spk_on_all(time<0.03 & time>0);
-        spk_off_exc = spk_off_all(time<0.03 & time>0);
+        spk_on_exc = spk_on_all(time<0.01 & time>0);
+        spk_off_exc = spk_off_all(time<0.01 & time>0);
         
         spk_off_inh_mat = sum(spk_off_mat(time<0.15 & time>0.03,:));
-        spk_off_exc_mat = sum(spk_off_mat(time<0.03 & time>0,:));
+        spk_off_exc_mat = sum(spk_off_mat(time<0.01 & time>0,:));
         spk_on_inh_mat = sum(spk_on_mat(time<0.15 & time>0.03,:));
-        spk_on_exc_mat = sum(spk_on_mat(time<0.03 & time>0,:));
+        spk_on_exc_mat = sum(spk_on_mat(time<0.01 & time>0,:));
         
         spk_cnt_on_inh(cnt) = sum(spk_on_inh)/length(spk_on)/0.12;
         spk_cnt_off_inh(cnt) = sum(spk_off_inh)/length(spk_off)/0.12;
-        spk_cnt_on_exc(cnt) = sum(spk_on_exc)/length(spk_on)/0.03;
-        spk_cnt_off_exc(cnt) = sum(spk_off_exc)/length(spk_off)/0.03;
+        spk_cnt_on_exc(cnt) = sum(spk_on_exc)/length(spk_on)/0.01;
+        spk_cnt_off_exc(cnt) = sum(spk_off_exc)/length(spk_off)/0.01;
         
         minlength_exc = min(length(spk_on_exc_mat),length(spk_off_exc_mat));
         minlength_inh = min(length(spk_on_inh_mat),length(spk_off_inh_mat));
-        p_val_exc(cnt) = signrank(spk_on_exc_mat(1:minlength_exc), spk_off_exc_mat(1:minlength_exc));
-        p_val_inh(cnt) = signrank(spk_on_inh_mat(1:minlength_inh), spk_off_inh_mat(1:minlength_inh));
+        [~,p_val_exc(cnt)] = ttest2(spk_on_exc_mat(1:minlength_exc), spk_off_exc_mat(1:minlength_exc));
+        [~,p_val_inh(cnt)] = ttest2(spk_on_inh_mat(1:minlength_inh), spk_off_inh_mat(1:minlength_inh));
     end
 end
 
