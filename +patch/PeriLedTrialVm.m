@@ -1,12 +1,12 @@
 %{
-patch.PeriLedTrialVm (computed) # this table compute the mean Vm for both excitation window 0-40ms and inhibition window 40-150ms
+patch.PeriLedTrialVm (computed) # this table computes Vm relative to the visual stimuli onset
 -> patch.PeriLedTrial
 -----
-peri_led_time     :  longblob     # 0 for LED onset, in sec, inherit from table patch.PeriLedTrial
-peri_led_win_exc  :  tinyblob     # time window or excitation, [0,0.04]
-peri_led_win_inh  :  tinyblob     # time window for inhibition, [0.04,0.15]
-peri_led_vm_exc   :  double       # mean vm during the excitation window,in Volts
-peri_led_vm_inh   :  double       # mean vm during the inhibition window in Volts
+peri_led_vm_vis_onset : double  # vm baseline at the visual stimulus onset
+peri_led_vm_norm_vis:  longblob    # vm extracted baseline at visual stimulus onset
+peri_led_stat   :  tinyint     # status of led, on or off
+peri_led_time   :  longblob    # new time, 0 for LED starting point, in sec
+peri_led_mean_vel : double     # mean velocity of the ball during this trial
 
 %}
 
@@ -19,13 +19,17 @@ classdef PeriLedTrialVm < dj.Relvar & dj.AutoPopulate
     methods(Access=protected)
 
 		function makeTuples(self, key)
-            [vm, time] = fetch1(patch.PeriLedTrial & key, 'peri_led_vm_norm','peri_led_time');
+            [vm, time, delay, mean_vel, stat] = fetch1(patch.PeriLedTrial & key, 'peri_led_vm','peri_led_time','peri_led_delay','peri_led_mean_vel','peri_led_stat');
+            time_onset = -delay;
+            vm_vis_onset = mean(vm(abs(time-time_onset)<1e-4));
             
+            vm_norm = vm - vm_vis_onset;
+            
+            key.peri_led_vm_vis_onset = vm_vis_onset;
+            key.peri_led_vm_norm_vis = vm_norm;
+            key.peri_led_stat = stat;
             key.peri_led_time = time;
-            key.peri_led_win_exc = [0,0.04];
-            key.peri_led_win_inh = [0.04,0.15];
-            key.peri_led_vm_exc = mean(vm(time<0.04 & time>0));
-            key.peri_led_vm_inh = mean(vm(time>0.04 & time<0.15));
+            key.peri_led_mean_vel = mean_vel;
             
 			self.insert(key)
 		end

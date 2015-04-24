@@ -21,14 +21,14 @@ for i=1:length(key)
     % mark led stimulation
     led = fetch1(patch.LedSet & key(i), 'led_trace');
     
-    scale = std(vm);
+    scale = nanstd(vm);
     baseline = min(vm) - scale;
     
     scaled_led = (led - min(led))/(max(led)-min(led));
     plot(vt,(scaled_led*scale+baseline)*1000)
     
-    idx_led = scaled_led>0.2;
-    plot(vt(idx_led),vm(idx_led)*1000,'b','LineStyle','None','Marker','.','MarkerSize',1.5);
+%     idx_led = scaled_led>0.2;
+%     plot(vt(idx_led),vm(idx_led)*1000,'b','LineStyle','None','Marker','.','MarkerSize',1.5);
 %     h1 = plot([39.2,39.7],[-20,-20],'k');
 %     h2 = plot([39.2,39.2],[-20,0],'k');
 %     ylim([-100,20]); xlim([31.5,39.7]);
@@ -46,7 +46,11 @@ for i=1:length(key)
         offset = onset+dur;
         h = patch([onset,offset,offset,onset],[yLim(1),yLim(1),yLim(2),yLim(2)],colorref(ind,:),'LineStyle','None');
         uistack(h,'bottom');
+        if onset>225  && onset<230
+            iKey.direction
+        end
     end
     
-%     fig.cleanup; fig.save('ori_tuning_exp.eps');
+    fig.cleanup
+    
 end

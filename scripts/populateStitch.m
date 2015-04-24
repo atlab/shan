@@ -1,5 +1,5 @@
 
-animal = 'animal_id = 5490';
+animal = 'animal_id = 5667';
 
 populate(info.Stack, animal);
 populate(info.Stack2Img, animal);
